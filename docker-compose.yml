@@ -1,0 +1,6 @@
+﻿services:
+  mediajournal.web:
+    image: mediajournal.web
+    build:
+      context: .
+      dockerfile: MediaJournal.Web/Dockerfile
