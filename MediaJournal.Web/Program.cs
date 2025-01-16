@@ -1,6 +1,7 @@
+using MediaJournal.Data.Context;
+using MediaJournal.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using MediaJournal.Web.Data;
 
 namespace MediaJournal.Web;
 
@@ -17,7 +18,12 @@ public class Program
             options.UseSqlite(connectionString));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-        builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+        builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+            {
+                 options.SignIn.RequireConfirmedAccount = false;
+                 options.SignIn.RequireConfirmedEmail = false;
+                 options.SignIn.RequireConfirmedPhoneNumber = false;
+            })
             .AddEntityFrameworkStores<ApplicationDbContext>();
         builder.Services.AddControllersWithViews();
 

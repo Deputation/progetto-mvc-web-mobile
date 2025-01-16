@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaJournal.Models", "MediaJournal.Models\MediaJournal.Models.csproj", "{64611A37-996E-4C75-AD4E-F14CD639E9B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaJournal.Data", "MediaJournal.Data\MediaJournal.Data.csproj", "{5EBE1FF1-95F9-44C8-A780-0BB453DC5D2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,5 +21,13 @@ Global
 		{33A61632-C6B6-4EB8-9C38-1CDF2262CA9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33A61632-C6B6-4EB8-9C38-1CDF2262CA9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{33A61632-C6B6-4EB8-9C38-1CDF2262CA9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64611A37-996E-4C75-AD4E-F14CD639E9B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64611A37-996E-4C75-AD4E-F14CD639E9B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64611A37-996E-4C75-AD4E-F14CD639E9B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64611A37-996E-4C75-AD4E-F14CD639E9B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EBE1FF1-95F9-44C8-A780-0BB453DC5D2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EBE1FF1-95F9-44C8-A780-0BB453DC5D2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EBE1FF1-95F9-44C8-A780-0BB453DC5D2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EBE1FF1-95F9-44C8-A780-0BB453DC5D2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
