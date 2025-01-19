@@ -1,0 +1,229 @@
+@using MediaJournal.Models.Entities
+@model MediaJournal.Web.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<style>
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.8rem;
+    }
+
+    .list-group-item h6 {
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .card {
+        height: 100%;
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Hidden media data for service worker -->
+    <div id="media-data" style="display: none;"
+         data-media-ids='@Json.Serialize(Model.MediaItems.Select(m => m.ID))'></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">My Dashboard</h1>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Media
+        </a>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Items</h6>
+                    <h2 class="card-title mb-0">@Model.TotalItems</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Average Rating</h6>
+                    <h2 class="card-title mb-2">@Model.AverageRating.ToString("F1")</h2>
+                    <div>
+                        @for (var i = 1; i <= 10; i++)
+                        {
+                            <i class="bi @(i <= Math.Round(Model.AverageRating) ? "bi-star-fill" : "bi-star") text-warning"></i>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Most Reviewed</h6>
+                    <h2 class="card-title mb-0">
+                        <span class="badge bg-@GetBadgeColor(Model.MostReviewedType)">
+                            @Model.MostReviewedType
+                        </span>
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Type Distribution -->
+    <div class="row g-4 mb-4">
+        @foreach (MediaType type in Enum.GetValues(typeof(MediaType)))
+        {
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">@type</h6>
+                                <h3 class="card-title mb-0">
+                                    @(Model.ItemsByType.GetValueOrDefault(type, 0))
+                                </h3>
+                            </div>
+                            <span class="badge bg-@GetBadgeColor(type) mt-1">
+                                @(((double)Model.ItemsByType.GetValueOrDefault(type, 0) / Math.Max(1, Model.TotalItems) * 100).ToString("F0"))%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Rating Distribution -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Rating Distribution</h5>
+                    <canvas id="ratingChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Recent Activity</h5>
+                    @if (Model.RecentItems.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var item in Model.RecentItems)
+                            {
+                                <a href="@Url.Action("Details", new { id = item.ID })"
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">@item.Title</h6>
+                                        <small class="text-muted">
+                                            Completed @item.CompletedDate.ToString("MMMM d, yyyy")
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-@GetBadgeColor(item.Type)">@item.Type</span>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <p>No media added yet</p>
+                            <a asp-action="Create" class="btn btn-outline-primary btn-sm">Add Your First Media</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetBadgeColor(MediaType type) => type switch
+    {
+        MediaType.Book => "primary",
+        MediaType.Game => "success",
+        MediaType.Movie => "danger",
+        MediaType.Series => "warning",
+        _ => "secondary"
+    };
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('ratingChart').getContext('2d');
+            const ratings = @Html.Raw(Json.Serialize(Model.RatingDistribution));
+            
+            // Prepare data
+            const labels = Array.from({length: 10}, (_, i) => i + 1);
+            const data = labels.map(label => ratings[label] || 0);
+            
+            // Chart dimensions
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Calculate scales
+            const maxCount = Math.max(...data);
+            const barWidth = (width - 2 * padding) / labels.length;
+            const scale = (height - 2 * padding) / maxCount;
+            
+            // Draw axes
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+            
+            // Draw bars
+            data.forEach((value, index) => {
+                const x = padding + index * barWidth;
+                const barHeight = value * scale;
+                
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(
+                    x + 5, 
+                    height - padding - barHeight, 
+                    barWidth - 10, 
+                    barHeight
+                );
+                
+                // Draw label
+                ctx.fillStyle = '#000000';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    (index + 1).toString(), 
+                    x + barWidth / 2, 
+                    height - padding + 20
+                );
+                
+                // Draw value
+                if (value > 0) {
+                    ctx.fillText(
+                        value.toString(), 
+                        x + barWidth / 2, 
+                        height - padding - barHeight - 5
+                    );
+                }
+            });
+        });
+    </script>
+}

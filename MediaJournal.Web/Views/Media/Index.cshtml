@@ -1,65 +1,139 @@
-@model IEnumerable<MediaJournal.Models.Entities.Media>
-
+@using MediaJournal.Models.Entities
+@model MediaJournal.Web.Models.MediaLibraryViewModel
 @{
-    ViewData["Title"] = "Index";
+ViewData["Title"] = "Media Library";
 }
 
-<h1>Index</h1>
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Title)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Type)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CompletedDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Rating)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Review)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.User)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Title)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Type)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CompletedDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Rating)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Review)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.User.Id)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.ID">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.ID">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.ID">Delete</a>
-            </td>
-        </tr>
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .media-item {
+        display: flex;
+    }
+
+    .bi {
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-4 mb-0">My Media Library</h1>
+            <p class="text-muted">@Model.TotalItems items in your collection</p>
+        </div>
+        <a href="@Url.Action("Create")" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Media
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="btn-group" role="group" aria-label="Media type filters">
+                <button type="button" class="btn btn-outline-secondary active" data-filter="all">
+                    All (@Model.TotalItems)
+                </button>
+                @foreach (var type in Model.TypeCounts)
+                {
+                <button type="button" class="btn btn-outline-secondary" data-filter="@type.Key.ToString().ToLower()">
+                    @type.Key (@type.Value)
+                </button>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <input type="search" class="form-control" id="searchBox"
+                   placeholder="Search your media..." aria-label="Search">
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4" id="mediaGrid">
+        @foreach (var item in Model.MediaItems)
+        {
+        <div class="col media-item" data-type="@item.Type.ToString().ToLower()">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-@GetBadgeColor(item.Type)">@item.Type</span>
+                        <small class="text-muted">@item.CompletedDate.ToString("MMM dd, yyyy")</small>
+                    </div>
+                    <h5 class="card-title">@item.Title</h5>
+                    <div class="mb-2">
+                        @for (var i = 1; i <= 10; i++)
+                        {
+                        <i class="bi @(i <= item.Rating ? "bi-star-fill" : "bi-star") text-warning"></i>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(item.Review))
+                    {
+                    <p class="card-text">@(item.Review.Length > 100 ? item.Review[..100] + "..." : item.Review)</p>
+                    }
+                </div>
+                <div class="card-footer bg-transparent border-top-0">
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("Details", new { id = item.ID })" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        <a href="@Url.Action("Edit", new { id = item.ID })" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+@functions {
+private string GetBadgeColor(MediaType type) => type switch
+{
+MediaType.Book => "primary",
+MediaType.Game => "success",
+MediaType.Movie => "danger",
+MediaType.Series => "warning",
+_ => "secondary"
+};
 }
-    </tbody>
-</table>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mediaGrid = document.getElementById('mediaGrid');
+        const searchBox = document.getElementById('searchBox');
+        const filterButtons = document.querySelectorAll('[data-filter]');
+
+        searchBox.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const items = mediaGrid.getElementsByClassName('media-item');
+
+            Array.from(items).forEach(item => {
+                const title = item.querySelector('.card-title').textContent.toLowerCase();
+                const isVisible = title.includes(searchTerm);
+                item.style.display = isVisible ? '' : 'none';
+            });
+        });
+
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const filter = this.dataset.filter;
+                const items = mediaGrid.getElementsByClassName('media-item');
+
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+
+                Array.from(items).forEach(item => {
+                    const shouldShow = filter === 'all' || item.dataset.type === filter;
+                    item.style.display = shouldShow ? '' : 'none';
+                });
+            });
+        });
+    });
+</script>
+}

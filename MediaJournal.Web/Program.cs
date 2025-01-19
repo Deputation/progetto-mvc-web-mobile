@@ -1,6 +1,7 @@
 using MediaJournal.Data.Context;
 using MediaJournal.Models.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
 namespace MediaJournal.Web;
@@ -20,11 +21,26 @@ public class Program
 
         builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
             {
-                 options.SignIn.RequireConfirmedAccount = false;
-                 options.SignIn.RequireConfirmedEmail = false;
-                 options.SignIn.RequireConfirmedPhoneNumber = false;
+                options.SignIn.RequireConfirmedAccount = false;
+                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedPhoneNumber = false;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        builder.Services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
+            options.SlidingExpiration = true;
+            options.Cookie.MaxAge = options.ExpireTimeSpan;
+
+            options.LoginPath = "/Identity/Account/Login";
+            options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+        });
+
         builder.Services.AddControllersWithViews();
 
         var app = builder.Build();
@@ -47,6 +63,19 @@ public class Program
         app.UseRouting();
 
         app.UseAuthorization();
+
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            ServeUnknownFileTypes = true,
+            DefaultContentType = "application/json",
+            ContentTypeProvider = new FileExtensionContentTypeProvider
+            {
+                Mappings =
+                {
+                    [".js"] = "application/javascript"
+                }
+            }
+        });
 
         app.MapControllerRoute(
             name: "default",

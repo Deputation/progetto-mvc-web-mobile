@@ -1,0 +1,166 @@
+@using MediaJournal.Models.Entities
+@model MediaJournal.Web.Models.MediaFormViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<style>
+    .star-rating {
+        display: flex;
+        align-items: center;
+    }
+
+    .stars {
+        display: inline-flex;
+        gap: 0.25rem;
+    }
+
+    .star-icon {
+        font-size: 1.5rem;
+        color: #ffc107;
+        cursor: pointer;
+    }
+
+    .rating-value {
+        font-size: 1.2rem;
+        color: #6c757d;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Back button -->
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Library
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="card-title h3 mb-4">@Model.Title</h1>
+
+                    <form asp-action="@Model.Action" id="mediaForm">
+                        @if (Model.IsEdit)
+                        {
+                            <input type="hidden" asp-for="Media.ID"/>
+                        }
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <!-- Title -->
+                        <div class="mb-4">
+                            <label asp-for="Media.Title" class="form-label">Title</label>
+                            <input asp-for="Media.Title" class="form-control form-control-lg" required/>
+                            <span asp-validation-for="Media.Title" class="text-danger"></span>
+                        </div>
+
+                        <!-- Media Type -->
+                        <div class="mb-4">
+                            <label asp-for="Media.Type" class="form-label">Type</label>
+                            <select asp-for="Media.Type" asp-items="Html.GetEnumSelectList<MediaType>()"
+                                    class="form-select" required>
+                            </select>
+                            <span asp-validation-for="Media.Type" class="text-danger"></span>
+                        </div>
+
+                        <!-- Completion Date -->
+                        <div class="mb-4">
+                            <label asp-for="Media.CompletedDate" class="form-label">Completion Date</label>
+                            <input asp-for="Media.CompletedDate" class="form-control" type="date" required/>
+                            <span asp-validation-for="Media.CompletedDate" class="text-danger"></span>
+                        </div>
+
+                        <!-- Rating -->
+                        <div class="mb-4">
+                            <label class="form-label d-block">Rating</label>
+                            <div class="star-rating">
+                                <input type="hidden" asp-for="Media.Rating" id="ratingInput" required/>
+                                <div class="stars">
+                                    @for (var i = 1; i <= 10; i++)
+                                    {
+                                        <i class="bi bi-star star-icon" data-rating="@i"></i>
+                                    }
+                                </div>
+                                <div class="rating-value ms-2">
+                                    <span id="ratingDisplay">@Model.Media.Rating</span>/10
+                                </div>
+                            </div>
+                            <span asp-validation-for="Media.Rating" class="text-danger"></span>
+                        </div>
+
+                        <!-- Review -->
+                        <div class="mb-4">
+                            <label asp-for="Media.Review" class="form-label">Review</label>
+                            <textarea asp-for="Media.Review" class="form-control" 
+                                      rows="6" placeholder="Write your review here..."></textarea>
+                            <span asp-validation-for="Media.Review" class="text-danger"></span>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                @(Model.IsEdit ? "Save Changes" : "Create")
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ratingInput = document.getElementById('ratingInput');
+            const ratingDisplay = document.getElementById('ratingDisplay');
+            const stars = document.querySelectorAll('.star-icon');
+            
+            // Initialize stars based on current rating
+            function updateStars(rating) {
+                stars.forEach((star, index) => {
+                    if (index < rating) {
+                        star.classList.remove('bi-star');
+                        star.classList.add('bi-star-fill');
+                    } else {
+                        star.classList.remove('bi-star-fill');
+                        star.classList.add('bi-star');
+                    }
+                });
+                ratingDisplay.textContent = rating;
+            }
+            
+            // Set initial state
+            updateStars(ratingInput.value || 0);
+            
+            // Handle star clicks
+            stars.forEach(star => {
+                star.addEventListener('click', () => {
+                    const rating = parseInt(star.dataset.rating);
+                    ratingInput.value = rating;
+                    updateStars(rating);
+                });
+                
+                // Hover effects
+                star.addEventListener('mouseenter', () => {
+                    const rating = parseInt(star.dataset.rating);
+                    updateStars(rating);
+                });
+            });
+            
+            document.querySelector('.stars').addEventListener('mouseleave', () => {
+                updateStars(ratingInput.value || 0);
+            });
+        });
+    </script>
+}

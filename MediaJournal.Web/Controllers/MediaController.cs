@@ -1,14 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MediaJournal.Data.Context;
 using MediaJournal.Models.Entities;
+using MediaJournal.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace MediaJournal.Web.Controllers
 {
@@ -17,14 +14,14 @@ namespace MediaJournal.Web.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-            
+
         public MediaController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
         }
 
-        // GET: Media
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             var currentUser = await _userManager.GetUserAsync(User);
@@ -32,11 +29,16 @@ namespace MediaJournal.Web.Controllers
                 .Where(m => m.UserId == currentUser.Id)
                 .OrderByDescending(m => m.CompletedDate)
                 .ToListAsync();
-            
-            return View(userMedia);
+
+            var viewModel = new MediaLibraryViewModel
+            {
+                MediaItems = userMedia
+            };
+
+            return View(viewModel);
         }
 
-        // GET: Media/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -52,34 +54,46 @@ namespace MediaJournal.Web.Controllers
                 return NotFound();
             }
 
-            return View(media);
+            var model = new MediaDetailsViewModel()
+            {
+                Media = media,
+            };
+
+            return View(model);
         }
 
-        // GET: Media/Create
+        [HttpGet]
         public IActionResult Create()
         {
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id");
-            return View();
+            var viewModel = new MediaFormViewModel
+            {
+                Media = new Media { CompletedDate = DateTime.Today },
+                Action = "Create"
+            };
+
+            return View("MediaForm", viewModel);
         }
 
-        // POST: Media/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId")] Media media)
         {
             if (ModelState.IsValid)
             {
+                media.UserId = _userManager.GetUserId(User);
                 _context.Add(media);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", media.UserId);
-            return View(media);
+
+            var viewModel = new MediaFormViewModel
+            {
+                Media = media
+            };
+
+            return View("MediaForm", viewModel);
         }
 
-        // GET: Media/Edit/5
+        [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -92,16 +106,20 @@ namespace MediaJournal.Web.Controllers
             {
                 return NotFound();
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", media.UserId);
-            return View(media);
+
+            var viewModel = new MediaFormViewModel
+            {
+                Media = media,
+                Action = "Edit"
+            };
+
+            return View("MediaForm", viewModel);
         }
 
-        // POST: Media/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId")] Media media)
+        public async Task<IActionResult> Edit(int id,
+            [Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId")] Media media)
         {
             if (id != media.ID)
             {
@@ -112,6 +130,7 @@ namespace MediaJournal.Web.Controllers
             {
                 try
                 {
+                    media.UserId = _userManager.GetUserId(User);
                     _context.Update(media);
                     await _context.SaveChangesAsync();
                 }
@@ -126,13 +145,21 @@ namespace MediaJournal.Web.Controllers
                         throw;
                     }
                 }
+
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", media.UserId);
-            return View(media);
+
+            var viewModel = new MediaFormViewModel
+            {
+                Media = media,
+                Action = "Edit"
+            };
+
+            return View("MediaForm", viewModel);
         }
 
-        // GET: Media/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -148,24 +175,41 @@ namespace MediaJournal.Web.Controllers
                 return NotFound();
             }
 
-            return View(media);
-        }
-
-        // POST: Media/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var media = await _context.Media.FindAsync(id);
-            if (media != null)
-            {
-                _context.Media.Remove(media);
-            }
-
+            _context.Media.Remove(media);
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
+        
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            var userId = _userManager.GetUserId(User);
+            var userMedia = await _context.Media
+                .Where(m => m.UserId == userId)
+                .ToListAsync();
 
+            var viewModel = new DashboardViewModel
+            {
+                MediaItems = userMedia,
+                TotalItems = userMedia.Count,
+                ItemsByType = userMedia.GroupBy(m => m.Type)
+                    .ToDictionary(g => g.Key, g => g.Count()),
+                AverageRating = userMedia.Any() ? userMedia.Average(m => m.Rating) : 0,
+                RatingDistribution = userMedia.GroupBy(m => m.Rating)
+                    .ToDictionary(g => g.Key, g => g.Count()),
+                RecentItems = userMedia.OrderByDescending(m => m.CompletedDate)
+                    .Take(5)
+                    .ToList(),
+                MostReviewedType = userMedia.Any() ? 
+                    userMedia.GroupBy(m => m.Type)
+                        .OrderByDescending(g => g.Count())
+                        .First().Key : MediaType.Book
+            };
+
+            return View(viewModel);
+        }
+        
         private bool MediaExists(int id)
         {
             return _context.Media.Any(e => e.ID == id);

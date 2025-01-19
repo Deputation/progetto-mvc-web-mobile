@@ -1,54 +1,128 @@
-@model MediaJournal.Models.Entities.Media
-
+@using MediaJournal.Models.Entities
+@model MediaJournal.Web.Models.MediaDetailsViewModel
 @{
-    ViewData["Title"] = "Details";
+ViewData["Title"] = Model.Media.Title;
 }
 
-<h1>Details</h1>
+<style>
+    .review-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #2c3e50;
+    }
 
-<div>
-    <h4>Media</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Title)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Title)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Type)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Type)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CompletedDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CompletedDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Rating)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Rating)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Review)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Review)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.User)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.User.Id)
-        </dd>
-    </dl>
+    .review-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .bi-star-fill, .bi-star {
+        font-size: 1em;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Back button -->
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Library
+        </a>
+    </div>
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h1 class="display-4 mb-2">@Model.Media.Title</h1>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-@GetBadgeColor(Model.Media.Type) fs-6">
+                            @Model.Media.Type
+                        </span>
+                        <span class="text-muted">
+                            Completed on @Model.Media.CompletedDate.ToString("MMMM d, yyyy")
+                        </span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Media.ID"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <form asp-controller="Media" asp-action="Delete" method="post" style="display: inline;">
+                        <input type="hidden" name="id" value="@Model.Media.ID" />
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger"
+                                onclick="return confirm('Are you sure you want to delete this item?');">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Rating</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="fs-4">
+                            @for (var i = 1; i <= 10; i++)
+                            {
+                            <i class="bi @(i <= Model.Media.Rating ? "bi-star-fill" : "bi-star") text-warning"></i>
+                            }
+                        </div>
+                        <span class="fs-4 ms-2">@Model.Media.Rating/10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Section -->
+    <div class="row">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted">Review</h6>
+                    @if (Model.HasReview)
+                    {
+                    <div class="review-content">
+                        @foreach (var paragraph in (Model.Media.Review ?? "").Split("\n"))
+                        {
+                        if (!string.IsNullOrWhiteSpace(paragraph))
+                        {
+                        <p class="mb-3">@paragraph.Trim()</p>
+                        }
+                        }
+                    </div>
+                    }
+                    else
+                    {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-journal-text display-4 d-block mb-3"></i>
+                        <p>No review written yet</p>
+                        <a asp-action="Edit" asp-route-id="@Model.Media.ID"
+                           class="btn btn-outline-primary btn-sm">
+                            Write a Review
+                        </a>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.ID">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+@functions {
+private string GetBadgeColor(MediaType type) => type switch
+{
+MediaType.Book => "primary",
+MediaType.Game => "success",
+MediaType.Movie => "danger",
+MediaType.Series => "warning",
+_ => "secondary"
+};
+}
