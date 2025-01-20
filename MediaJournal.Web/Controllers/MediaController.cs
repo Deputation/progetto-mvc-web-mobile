@@ -75,7 +75,8 @@ namespace MediaJournal.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId")] Media media)
+        public async Task<IActionResult> Create(
+            [Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId,IsPublic")] Media media)
         {
             if (ModelState.IsValid)
             {
@@ -119,7 +120,7 @@ namespace MediaJournal.Web.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id,
-            [Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId")] Media media)
+            [Bind("ID,Title,Type,CompletedDate,Rating,Review,UserId,IsPublic")] Media media)
         {
             if (id != media.ID)
             {

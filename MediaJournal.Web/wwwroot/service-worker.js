@@ -18,7 +18,8 @@ const staticCacheUrls = [
     '/icons/icon-512x512.png',
     '/manifest.json',
     '/service-worker.js',
-    '/favicon.ico'
+    '/favicon.ico',
+    '/offline.html'
 ];
 
 const createCacheableResponse = (response) => {
@@ -114,6 +115,81 @@ const shouldRefreshAuth = async (cache) => {
     return Date.now() - lastRefresh > AUTH_REFRESH_INTERVAL;
 };
 
+const getPublicIdsFromHtml = async (html) => {
+    const mediaDataMatch = html.match(/data-media-ids='(\[.*?\])'/);
+    if (!mediaDataMatch || !mediaDataMatch[1]) {
+        return [];
+    }
+
+    try {
+        return JSON.parse(mediaDataMatch[1]);
+    } catch (error) {
+        console.error('Failed to parse public media IDs:', error);
+        return [];
+    }
+};
+
+const shouldRefreshPublicCache = async (cache) => {
+    const hasPublicEntries = (await cache.keys())
+        .some(req => req.url.includes('/Public/'));
+
+    if (!hasPublicEntries) return true;
+
+    const indexResponse = await cache.match('/Public/Index');
+    if (!indexResponse) return true;
+
+    const cachedTime = new Date(indexResponse.headers.get('sw-cache-timestamp'));
+    return Date.now() - cachedTime.getTime() > 10 * 60 * 1000;
+};
+
+const refreshPublicCache = async (cache) => {
+    const publicResponse = await fetch('/Public/Index', {
+        cache: 'no-cache'
+    });
+
+    if (!publicResponse.ok) {
+        throw new Error('Failed to fetch public reviews');
+    }
+
+    await cache.put(
+        '/Public/Index',
+        createCacheableResponse(publicResponse.clone())
+    );
+
+    const publicHtml = await publicResponse.text();
+    const publicIds = await getPublicIdsFromHtml(publicHtml);
+
+    await Promise.all((await cache.keys())
+        .filter(req => req.url.includes('/Public/Details/'))
+        .map(req => cache.delete(req)));
+
+    await Promise.all(publicIds.map(async (id) => {
+        const detailsResponse = await fetch(`/Public/Details/${id}`, {
+            cache: 'no-cache'
+        });
+        if (detailsResponse.ok) {
+            await cache.put(
+                `/Public/Details/${id}`,
+                createCacheableResponse(detailsResponse)
+            );
+        }
+    }));
+};
+
+const ensureOfflinePage = async (cache) => {
+    const existingOfflinePage = await cache.match('/offline.html');
+    if (!existingOfflinePage) {
+        try {
+            const offlineResponse = await fetch('/offline.html');
+            if (offlineResponse.ok) {
+                await cache.put('/offline.html', createCacheableResponse(offlineResponse));
+            }
+        } catch (error) {
+            console.error('Failed to cache offline page:', error);
+        }
+    }
+};
+
 self.addEventListener('install', (event) => {
     event.waitUntil(
         (async () => {
@@ -155,9 +231,22 @@ self.addEventListener('fetch', (event) => {
         (async () => {
             const cache = await caches.open(runtimeCacheName);
 
+            await ensureOfflinePage(cache);
+            
             const isNotGet = ['POST', 'PUT', 'DELETE'].includes(event.request.method);
             const mediaChanged = isNotGet && event.request.url.includes('/Media/');
 
+            const needsPublicRefresh = await shouldRefreshPublicCache(cache);
+            const isPublicEndpoint = event.request.url.includes('/Public/');
+
+            if (isPublicEndpoint || needsPublicRefresh) {
+                try {
+                    await refreshPublicCache(cache);
+                } catch (refreshError) {
+                    console.error('Failed to refresh public cache:', refreshError);
+                }
+            }
+            
             try {
                 if (isNotGet) {
                     const response = await fetch(event.request);
@@ -205,6 +294,14 @@ self.addEventListener('fetch', (event) => {
                 if (cachedResponse) {
                     return cachedResponse;
                 }
+
+                if (event.request.mode === 'navigate') {
+                    const offlinePage = await cache.match('/offline.html');
+                    if (offlinePage) {
+                        return offlinePage;
+                    }
+                }
+                
                 throw error;
             }
         })()

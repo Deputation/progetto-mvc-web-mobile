@@ -103,6 +103,22 @@
                             <span asp-validation-for="Media.Review" class="text-danger"></span>
                         </div>
 
+                        <!-- Public Review Checkbox -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input asp-for="Media.IsPublic" class="form-check-input" id="isPublicCheck" type="checkbox">
+                                <label class="form-check-label" for="isPublicCheck">
+                                    Make this review public
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning d-none" id="publicAlert" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Making this review public means it will be visible to anyone visiting the site, even without an account.
+                            The review will be posted anonymously.
+                        </div>
+                        
                         <!-- Form Actions -->
                         <div class="d-flex gap-2 justify-content-end">
                             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
@@ -161,6 +177,15 @@
             document.querySelector('.stars').addEventListener('mouseleave', () => {
                 updateStars(ratingInput.value || 0);
             });
+        });
+
+        document.getElementById('isPublicCheck').addEventListener('change', function() {
+            const alert = document.getElementById('publicAlert');
+            if (this.checked) {
+                alert.classList.remove('d-none');
+            } else {
+                alert.classList.add('d-none');
+            }
         });
     </script>
 }

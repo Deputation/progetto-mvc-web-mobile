@@ -1,0 +1,109 @@
+@using MediaJournal.Models.Entities
+@model MediaJournal.Web.Models.MediaDetailsViewModel
+@{
+ViewData["Title"] = Model.Media.Title;
+}
+
+<style>
+    .review-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #2c3e50;
+    }
+
+    .review-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .bi-star-fill, .bi-star {
+        font-size: 1em;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Back button -->
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-link text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Public Reviews
+        </a>
+    </div>
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="display-4 mb-2">@Model.Media.Title</h1>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-@GetBadgeColor(Model.Media.Type) fs-6">
+                            @Model.Media.Type
+                        </span>
+                        <span class="text-muted">
+                            Completed on @Model.Media.CompletedDate.ToString("MMMM d, yyyy")
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Rating</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="fs-4">
+                            @for (var i = 1; i <= 10; i++)
+                            {
+                            <i class="bi @(i <= Model.Media.Rating ? "bi-star-fill" : "bi-star") text-warning"></i>
+                            }
+                        </div>
+                        <span class="fs-4 ms-2">@Model.Media.Rating/10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Section -->
+    <div class="row">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted">Review</h6>
+                    @if (Model.HasReview)
+                    {
+                    <div class="review-content">
+                        @foreach (var paragraph in (Model.Media.Review ?? "").Split("\n"))
+                        {
+                        if (!string.IsNullOrWhiteSpace(paragraph))
+                        {
+                        <p class="mb-3">@paragraph.Trim()</p>
+                        }
+                        }
+                    </div>
+                    }
+                    else
+                    {
+                    <div class="text-center text-muted py-5">
+                        <p>No review content available</p>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+private string GetBadgeColor(MediaType type) => type switch
+{
+MediaType.Book => "primary",
+MediaType.Game => "success",
+MediaType.Movie => "danger",
+MediaType.Series => "warning",
+_ => "secondary"
+};
+}
