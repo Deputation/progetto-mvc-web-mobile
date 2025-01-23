@@ -9,7 +9,7 @@ Media Journal è stato sviluppato come applicazione web moderna con funzionalit�
 - Scrivere recensioni private o pubbliche
 - Visualizzare statistiche dettagliate sul proprio consumo mediatico
 - Accedere ai propri contenuti anche offline
-- Installare l'applicazione come app nativa sui propri dispositivi
+- Installare l'applicazione come app sui propri dispositivi
 
 L'applicazione è pensata per appassionati di media che desiderano tenere traccia delle proprie esperienze e, opzionalmente, condividerle con altri utenti.
 
